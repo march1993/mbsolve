@@ -3,7 +3,10 @@ project(solver-openmp)
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 
-add_library(solver-openmp SHARED src/solver_2lvl_pc.cpp src/DensityMatrixData.cpp)
+add_library(solver-openmp SHARED
+  src/solver_2lvl_pc.cpp
+  src/solver_3lvl_pc.cpp
+  src/DensityMatrixData.cpp)
 
 target_compile_options(solver-openmp PRIVATE ${OpenMP_CXX_FLAGS})
 
