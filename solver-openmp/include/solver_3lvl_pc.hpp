@@ -15,19 +15,38 @@ struct sim_constants
     real M_CP;
     real sigma;
 
+    /* transition frequencies */
     real w12;
-    real d12;
-    real tau1;
+    real w13;
+    real w23;
+
+    /* dipoles */
+    real d23;
+
+    /* anticrossing frequencies */
+    real O12;
+
+    /* scattering rates (inverse lifetimes) */
+    real tau11;
+    real tau12;
+    real tau13;
+    real tau21;
+    real tau22;
+    real tau23;
+    real tau31;
+    real tau32;
+    real tau33;
+
+    /* dephasing rates */
     real gamma12;
+    real gamma13;
+    real gamma23;
 
     unsigned int idx_start;
     unsigned int idx_end;
 
     real d_x;
     real d_t;
-
-    real dm11_init;
-    real dm22_init;
 };
 
 class CopyListEntry

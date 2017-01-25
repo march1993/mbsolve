@@ -60,6 +60,7 @@ static void parse_args(int argc, char **argv)
 mbsolve::Device parse_device(const std::string& file)
 {
     mbsolve::Device dev;
+#if 0
     dev.Name = "Ziolkowski";
 
     /* TODO: read xml file */
@@ -91,6 +92,43 @@ mbsolve::Device parse_device(const std::string& file)
     vacuum.Name = "Vacuum right";
     vacuum.X0 = 142.5e-6;
     dev.Regions.push_back(vacuum);
+#endif
+
+    //    dev.Name = "OptExp";
+
+    dev.Name = "Optica";
+    mbsolve::Region qcl;
+    qcl.Name = "QCL";
+    qcl.X0 = 0;
+    qcl.XDim = 3e-3;
+    qcl.Overlap = 0.8;
+    qcl.Losses = 1200;
+    qcl.DopingDensity = 5e16;
+    qcl.RelPermittivity = 12.96;
+
+    qcl.AnticrossingEnergies.push_back(mbsolve::Quantity(-1.4099e-22));
+
+    qcl.DipoleMoments.push_back(mbsolve::Quantity(4.805e-9));
+
+    qcl.TransitionFrequencies.push_back(mbsolve::Quantity(4.649e11));
+    qcl.TransitionFrequencies.push_back(mbsolve::Quantity(1.735e13));
+    qcl.TransitionFrequencies.push_back(mbsolve::Quantity(1.682e13));
+
+    qcl.DephasingRates.push_back(mbsolve::Quantity(2.5e12));
+    qcl.DephasingRates.push_back(mbsolve::Quantity(1.25e12));
+    qcl.DephasingRates.push_back(mbsolve::Quantity(1.25e12));
+
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(0));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(29e9));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(13.3e9));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(71.4e9));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(0));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(106.5e9));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(1415.2e9));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(84.3e9));
+    qcl.ScatteringRates.push_back(mbsolve::Quantity(0));
+
+    dev.Regions.push_back(qcl);
 
     return dev;
 }
@@ -99,6 +137,7 @@ mbsolve::Scenario parse_scenario(const std::string& file)
 {
     mbsolve::Scenario scen;
 
+#if 0
     /* TODO: read xml file */
 
     /* Ziolkowski settings */
@@ -119,6 +158,27 @@ mbsolve::Scenario parse_scenario(const std::string& file)
 					   2e-15));
     scen.Records.push_back(mbsolve::Record("e", mbsolve::EField, 1, 1,
 					   2e-15));
+
+#endif
+
+    scen.Name = "Basic";
+
+    scen.SimEndTime = 1e-9;
+    scen.NumGridPoints = 4096;
+
+    scen.Records.push_back(mbsolve::Record("dm11", mbsolve::Density, 1, 1,
+					   1e-12));
+
+    scen.Records.push_back(mbsolve::Record("dm22", mbsolve::Density, 2, 2,
+                                           1e-12));
+
+    scen.Records.push_back(mbsolve::Record("dm33", mbsolve::Density, 3, 3,
+                                           1e-12));
+
+    scen.Records.push_back(mbsolve::Record("e", mbsolve::EField, 1, 1,
+					   1e-12));
+
+
     return scen;
 }
 
