@@ -103,7 +103,7 @@ mbsolve::Device parse_device(const std::string& file)
     qcl.XDim = 3e-3;
     qcl.Overlap = 0.8;
     qcl.Losses = 1200;
-    qcl.DopingDensity = 5e16;
+    qcl.DopingDensity = 5e22;
     qcl.RelPermittivity = 12.96;
 
     qcl.AnticrossingEnergies.push_back(mbsolve::Quantity(-1.4099e-22));
@@ -157,7 +157,7 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     scen.Records.push_back(mbsolve::Record("dm22", mbsolve::Density, 2, 2,
 					   2e-15));
     scen.Records.push_back(mbsolve::Record("e", mbsolve::EField, 1, 1,
-					   2e-15));
+                                           2e-15));
 
 #endif
 
@@ -176,7 +176,7 @@ mbsolve::Scenario parse_scenario(const std::string& file)
                                            1e-12));
 
     scen.Records.push_back(mbsolve::Record("e", mbsolve::EField, 1, 1,
-					   1e-12));
+                                           0.0, 0.0));
 
 
     return scen;

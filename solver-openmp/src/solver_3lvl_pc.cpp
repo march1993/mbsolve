@@ -137,17 +137,17 @@ SolverOMP_3lvl_pc::estimate_step(int i, real src) const
     }
 
     /* final update step */
-    m_dm->newDM(0, 0)[i] = rho11_e;
-    m_dm->newDM(0, 1)[i] = rho12i_e;
-    m_dm->newDM(0, 2)[i] = rho13i_e;
+    m_dm->oldDM(0, 0)[i] = rho11_e;
+    m_dm->oldDM(0, 1)[i] = rho12i_e;
+    m_dm->oldDM(0, 2)[i] = rho13i_e;
 
-    m_dm->newDM(1, 0)[i] = rho12r_e;
-    m_dm->newDM(1, 1)[i] = rho22_e;
-    m_dm->newDM(1, 2)[i] = rho23i_e;
+    m_dm->oldDM(1, 0)[i] = rho12r_e;
+    m_dm->oldDM(1, 1)[i] = rho22_e;
+    m_dm->oldDM(1, 2)[i] = rho23i_e;
 
-    m_dm->newDM(2, 0)[i] = rho13r_e;
-    m_dm->newDM(2, 1)[i] = rho12r_e;
-    m_dm->newDM(2, 2)[i] = rho33_e;
+    m_dm->oldDM(2, 0)[i] = rho13r_e;
+    m_dm->oldDM(2, 1)[i] = rho12r_e;
+    m_dm->oldDM(2, 2)[i] = rho33_e;
 
     m_e[i] = field_e;
 }
@@ -267,16 +267,10 @@ SolverOMP_3lvl_pc::SolverOMP_3lvl_pc(const Device& device,
         int region = get_region(i);
 
         m_dm->oldDM(0, 0)[i] = 0.33;
-        m_dm->newDM(0, 0)[i] = 0.33;
-        m_dm->rhs(0, 0, 0)[i] = 0.33;
 
         m_dm->oldDM(1, 1)[i] = 0.33;
-        m_dm->newDM(1, 1)[i] = 0.33;
-        m_dm->rhs(1, 1, 0)[i] = 0.33;
 
         m_dm->oldDM(2, 2)[i] = 0.34;
-        m_dm->newDM(2, 2)[i] = 0.34;
-        m_dm->rhs(2, 2, 0)[i] = 0.34;
 
 #pragma omp critical
         {
@@ -299,7 +293,7 @@ SolverOMP_3lvl_pc::SolverOMP_3lvl_pc(const Device& device,
     }
 
 #pragma omp parallel for
-    for (int i = 0; i < m_scenario.NumGridPoints + 1; i++) {
+    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
 #pragma omp critical
         {
             if ((i == 0) || (i == m_scenario.NumGridPoints)) {
@@ -312,10 +306,17 @@ SolverOMP_3lvl_pc::SolverOMP_3lvl_pc(const Device& device,
 
     /* set up results transfer data structures */
     BOOST_FOREACH(Record rec, m_scenario.Records) {
-	unsigned int row_ct = m_scenario.SimEndTime/rec.Interval;
-	unsigned int interval = ceil(1.0 * m_scenario.NumTimeSteps/row_ct);
-	unsigned int position_idx;
+	unsigned int interval;
+        unsigned int row_ct;
+        unsigned int position_idx;
 	unsigned int col_ct;
+
+        if (rec.Interval() < m_scenario.TimeStepSize) {
+            interval = 1;
+        } else {
+            interval = round(rec.Interval()/m_scenario.TimeStepSize);
+        }
+        row_ct = ceil(1.0 * m_scenario.NumTimeSteps/interval);
 
 	if (rec.Position() < 0.0) {
 	    /* copy complete grid */
@@ -398,28 +399,8 @@ SolverOMP_3lvl_pc::run() const
     {
 	/* main loop */
 	for (unsigned int n = 0; n < m_scenario.NumTimeSteps; n++) {
-
-	    /* update dm and e in parallel */
-#pragma omp for schedule(static)
-	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
-		estimate_step(i, 0.0);
-	    }
-
-	    /* update h in parallel */
-#pragma omp for schedule(static)
-	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
-		int region = get_region(i);
-
-		if (i != 0) {
-		    m_h[i] += gsc[region].M_CH * (m_e[i] - m_e[i - 1]);
-		}
-	    }
-
 #pragma omp master
 	    {
-		/* toggle density matrix data */
-		m_dm->next();
-
 		/* TODO parallel to update (or rather parallel copy) */
 		/* gather e field and dm entries in copy stream */
 		BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
@@ -441,6 +422,22 @@ SolverOMP_3lvl_pc::run() const
 		}
 	    }
 #pragma omp barrier
+
+	    /* update dm and e in parallel */
+#pragma omp for schedule(static)
+	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
+		estimate_step(i, 0.0);
+	    }
+
+	    /* update h in parallel */
+#pragma omp for schedule(static)
+	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
+		int region = get_region(i);
+
+		if (i != 0) {
+		    m_h[i] += gsc[region].M_CH * (m_e[i] - m_e[i - 1]);
+		}
+	    }
 	}
     }
 }
