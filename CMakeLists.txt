@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.7)
 project(mbsolve)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
@@ -12,11 +12,11 @@ add_subdirectory(mbsolve-lib)
 
 # MATLAB support?
 if(WITH_MATLAB)
-  find_package(MATLAB)
-  if(MATLAB_FOUND)
+  find_package(Matlab COMPONENTS ENG_LIBRARY)
+  if(Matlab_FOUND)
     set(MBSOLVE_MATLAB TRUE)
     add_subdirectory(writer-matlab)
-  endif(MATLAB_FOUND)
+  endif(Matlab_FOUND)
 endif(WITH_MATLAB)
 
 # CUDA support?
