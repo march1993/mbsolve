@@ -1,7 +1,5 @@
 #include <Solver.hpp>
 
-#include <boost/foreach.hpp>
-
 namespace mbsolve {
 
 std::map<std::string, ISolverFactory *>
@@ -10,8 +8,9 @@ Solver::m_factories;
 ISolver::~ISolver()
 {
     /* clean up results */
-    BOOST_FOREACH(Result *result, m_results) {
-	delete result;
+    for (std::vector<Result *>::iterator it = m_results.begin();
+         it != m_results.end(); it++) {
+        delete *it;
     }
 }
 
