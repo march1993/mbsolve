@@ -1,11 +1,12 @@
 #ifndef SOLVERGENERIC_H
 #define SOLVERGENERIC_H
 
+#include <solver-generic_EXPORTS.hpp>
 #include <Solver.hpp>
 
 namespace mbsolve {
 
-class SolverGeneric : public ISolver
+class SOLVER_GENERIC_EXPORT SolverGeneric : public ISolver
 {
 public:
     SolverGeneric(const Device& device, const Scenario& scenario);
