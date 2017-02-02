@@ -6,7 +6,7 @@
 
 namespace mbsolve {
 
-class Quantity
+class MBSOLVE_LIB_EXPORT Quantity
 {
 private:
     std::string m_name;

@@ -3,12 +3,13 @@
 
 #include <string>
 #include <vector>
+#include <mbsolve-lib_EXPORTS.hpp>
 #include <Quantity.hpp>
 #include <Types.hpp>
 
 namespace mbsolve {
 
-class Region
+class MBSOLVE_LIB_EXPORT Region
 {
 public:
     Region() : RelPermeability(1.0),
@@ -61,7 +62,7 @@ public:
 
 };
 
-class Device
+class MBSOLVE_LIB_EXPORT Device
 {
 public:
     std::string Name;
