@@ -1,6 +1,7 @@
 #ifndef OPENMP_2LVL_PC_H
 #define OPENMP_2LVL_PC_H
 
+#include <solver-openmp_EXPORTS.hpp>
 #include <Solver.hpp>
 #include <DensityMatrixData.hpp>
 
@@ -102,7 +103,7 @@ public:
     }
 };
 
-class SolverOMP_2lvl_pc : public ISolver
+class SOLVER_OPENMP_EXPORT SolverOMP_2lvl_pc : public ISolver
 {
 public:
     SolverOMP_2lvl_pc(const Device& device, const Scenario& scenario);
