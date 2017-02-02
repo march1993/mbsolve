@@ -3,12 +3,13 @@
 
 #include <string>
 #include <vector>
+#include <mbsolve-lib_EXPORTS.hpp>
 #include <Record.hpp>
 #include <Source.hpp>
 
 namespace mbsolve {
 
-class Scenario
+class MBSOLVE_LIB_EXPORT Scenario
 {
 public:
     std::string Name;

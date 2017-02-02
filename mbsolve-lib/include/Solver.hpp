@@ -4,13 +4,14 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <mbsolve-lib_EXPORTS.hpp>
 #include <Device.hpp>
 #include <Scenario.hpp>
 #include <Types.hpp>
 
 namespace mbsolve {
 
-class ISolver
+class MBSOLVE_LIB_EXPORT ISolver
 {
 protected:
     Scenario m_scenario;
@@ -37,9 +38,9 @@ public:
     }
 };
 
-class ISolverFactory;
+class MBSOLVE_LIB_EXPORT ISolverFactory;
 
-class Solver
+class MBSOLVE_LIB_EXPORT Solver
 {
 private:
     static std::map<std::string, ISolverFactory *> m_factories;
@@ -65,7 +66,7 @@ public:
 				ISolverFactory *factory);
 };
 
-class ISolverFactory
+class MBSOLVE_LIB_EXPORT ISolverFactory
 {
 public:
     ISolverFactory() { }

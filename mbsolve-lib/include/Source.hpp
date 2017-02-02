@@ -4,12 +4,13 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <mbsolve-lib_EXPORTS.hpp>
 #include <Quantity.hpp>
 #include <Types.hpp>
 
 namespace mbsolve {
 
-class ISource
+class MBSOLVE_LIB_EXPORT ISource
 {
 public:
     virtual Quantity operator()(const Quantity& x) const = 0;
@@ -20,7 +21,7 @@ public:
     /* TODO: for thevenin: add internal resistance */
 };
 
-class SineSource : ISource
+class MBSOLVE_LIB_EXPORT SineSource : ISource
 {
 private:
     Quantity m_ampl;
@@ -41,7 +42,7 @@ public:
 
 };
 
-class GaussianPulse : ISource
+class MBSOLVE_LIB_EXPORT GaussianPulse : ISource
 {
 
 public:

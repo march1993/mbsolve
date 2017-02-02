@@ -4,6 +4,7 @@
 #include <complex>
 #include <stdexcept>
 #include <string>
+#include <mbsolve-lib_EXPORTS.hpp>
 
 namespace mbsolve {
 /* type switch single/double */
@@ -20,7 +21,7 @@ typedef double real;
     /* TODO: use library for matrices? */
 
 
-class Result
+class MBSOLVE_LIB_EXPORT Result
 {
 private:
     std::string m_name;

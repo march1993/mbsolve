@@ -4,15 +4,16 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <mbsolve-lib_EXPORTS.hpp>
 #include <Device.hpp>
 #include <Scenario.hpp>
 #include <Types.hpp>
 
 namespace mbsolve {
 
-class IWriterFactory;
+class MBSOLVE_LIB_EXPORT IWriterFactory;
 
-class IWriter
+class MBSOLVE_LIB_EXPORT IWriter
 {
 public:
     IWriter() { }
@@ -25,7 +26,7 @@ public:
 };
 
 
-class Writer
+class MBSOLVE_LIB_EXPORT Writer
 {
 private:
     static std::map<std::string, IWriterFactory *> m_factories;
@@ -45,7 +46,7 @@ public:
 				IWriterFactory *factory);
 };
 
-class IWriterFactory
+class MBSOLVE_LIB_EXPORT IWriterFactory
 {
 public:
     IWriterFactory() { }

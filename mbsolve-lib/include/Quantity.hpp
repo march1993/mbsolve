@@ -1,7 +1,10 @@
 #ifndef QUANTITY_H
 #define QUANTITY_H
 
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <string>
+#include <mbsolve-lib_EXPORTS.hpp>
 #include <Types.hpp>
 
 namespace mbsolve {
@@ -44,10 +47,10 @@ public:
 
 };
 
-static Quantity HBAR = 1.05457266e-34;
-static Quantity MU0 =  M_PI * 4e-7;
-static Quantity EPS0 = 8.854187817e-12;
-static Quantity E0 =  1.60217733e-19;
+static MBSOLVE_LIB_EXPORT Quantity HBAR = 1.05457266e-34;
+static MBSOLVE_LIB_EXPORT Quantity MU0 =  M_PI * 4e-7;
+static MBSOLVE_LIB_EXPORT Quantity EPS0 = 8.854187817e-12;
+static MBSOLVE_LIB_EXPORT Quantity E0 =  1.60217733e-19;
 
 }
 

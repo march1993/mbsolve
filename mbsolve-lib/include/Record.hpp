@@ -2,13 +2,14 @@
 #define RECORD_H
 
 #include <string>
+#include <mbsolve-lib_EXPORTS.hpp>
 #include <Quantity.hpp>
 
 namespace mbsolve {
 
 enum RecordType { HField, EField, Density };
 
-class Record
+class MBSOLVE_LIB_EXPORT Record
 {
 private:
 public:
