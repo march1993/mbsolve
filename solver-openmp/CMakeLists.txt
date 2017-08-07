@@ -6,6 +6,7 @@ string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${FFTW_INCLUDE_DIR})
 
 # solvers that support Xeon Phi offloading
 set(SOLVER_OPENMP_SRCS
@@ -18,6 +19,7 @@ if(NOT ARCH STREQUAL "PHI")
   list(APPEND SOLVER_OPENMP_SRCS
     src/solver_openmp_2lvl_os.cpp
     src/solver_openmp_2lvl_os_red.cpp
+    src/solver_openmp_2lvl_pstd.cpp
   )
 endif()
 
@@ -54,6 +56,7 @@ target_compile_options(solver-openmp PRIVATE ${OpenMP_CXX_FLAGS})
 
 target_include_directories(solver-openmp PUBLIC include/)
 target_link_libraries(solver-openmp ${OpenMP_CXX_FLAGS})
+target_link_libraries(solver-openmp ${FFTW_LIBRARIES})
 target_link_libraries(solver-openmp mbsolve-lib)
 
 if(MBSOLVE_PYTHON)

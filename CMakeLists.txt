@@ -24,6 +24,9 @@ option(WITH_CPPTOOL "with(out) C++ tool" ON)
 # Eigen library
 find_package(Eigen3 REQUIRED)
 
+# FFTW library
+find_package(FFTW REQUIRED)
+
 # Python interface
 if(WITH_PYTHON)
   find_package(SWIG 2.0)
