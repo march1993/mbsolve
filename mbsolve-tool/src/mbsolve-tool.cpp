@@ -125,6 +125,7 @@ relax_sop_ziolk2(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     return ret;
 }
 
+<<<<<<< HEAD
 /* tzenov2018 absorber relaxation superoperator */
 Eigen::Matrix<mbsolve::complex, 2, 2>
 relax_sop_tzenov2018_abs(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
@@ -163,6 +164,19 @@ relax_sop_tzenov2018_gain(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     /* dephasing of coherence terms */
     ret(0, 1) = -dephasing_rate * arg(0, 1);
     ret(1, 0) = -dephasing_rate * arg(1, 0);
+=======
+Eigen::Matrix<mbsolve::complex, 6, 6>
+relax_marskar(const Eigen::Matrix<mbsolve::complex, 6, 6>& arg)
+{
+    Eigen::Matrix<mbsolve::complex, 6, 6> ret =
+        Eigen::Matrix<mbsolve::complex, 6, 6>::Zero();
+
+    ret(0, 0) = +1e10 * arg(1, 1);
+    ret(1, 1) = -1e10 * arg(1, 1);
+    ret(0, 1) = -1e10 * arg(0, 1);
+    ret(1, 0) = -1e10 * arg(1, 0);
+    // QUESTION 1
+>>>>>>> questions1234
 
     return ret;
 }
@@ -386,6 +400,29 @@ int main(int argc, char **argv)
             scen->add_record(std::make_shared<mbsolve::record>
                              ("h0", mbsolve::record::magnetic, 1, 1, 0.0,
                               1.373e-7));
+
+        } else if (device_file == "marskar2011multilevel") {
+            if (solver_method == "openmp-6lvl-os-red") {
+
+                Eigen::Matrix<mbsolve::complex, 6, 6> H, u, d_init;
+
+                H = H * mbsolve::HBAR * 2 * M_PI * 2e13;
+                // u = u * mbsolve::E0 * // QUESTION 2
+                // d_init <<  // QUESTION 3
+
+
+                auto qm = std::make_shared<mbsolve::qm_desc_clvl<6>>
+                    (1e25, H, u, &relax_marskar, d_init);
+
+                auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+                auto mat_al = std::make_shared<mbsolve::material>("AnharmonicLadder", qm);
+
+                /* set up device */
+                dev = std::make_shared<mbsolve::device>("Marskar");
+                // dev->add_region();
+                // QUESTION 4
+            }
+
         } else {
             throw std::invalid_argument("Specified device not found!");
         }
