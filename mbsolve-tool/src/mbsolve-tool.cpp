@@ -406,21 +406,61 @@ int main(int argc, char **argv)
 
                 Eigen::Matrix<mbsolve::complex, 6, 6> H, u, d_init;
 
+                // Hamiltonian
+                H(0, 0) = 1;
+                for (auto n = 1; n <= 5; n++) {
+                    H(n, n) = 1.0 - 0.1 * (n - 3);
+                }
                 H = H * mbsolve::HBAR * 2 * M_PI * 2e13;
+
+                // dipole_op
                 // u = u * mbsolve::E0 * // QUESTION 2
-                // d_init <<  // QUESTION 3
 
+                // initial density matrix
+                d_init(0, 0) = 0.60;
+                d_init(1, 1) = 0.23;
+                d_init(2, 2) = 0.096;
+                d_init(3, 3) = 0.044;
+                d_init(4, 4) = 0.02;
+                d_init(5, 5) = 0.01;
 
+                num_gridpoints = 32768;
+                sim_endtime = 2000e-15;
+                scen = std::make_shared<mbsolve::scenario>("Basic", num_gridpoints, sim_endtime);
+
+                // Na = 10e25
                 auto qm = std::make_shared<mbsolve::qm_desc_clvl<6>>
-                    (1e25, H, u, &relax_marskar, d_init);
+                    (10e25, H, u, &relax_marskar, d_init);
 
                 auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
                 auto mat_al = std::make_shared<mbsolve::material>("AnharmonicLadder", qm);
 
                 /* set up device */
                 dev = std::make_shared<mbsolve::device>("Marskar");
-                // dev->add_region();
-                // QUESTION 4
+                // pad 10% of 1.0 millimeter to both side
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Vacuum left", mat_vac, 0, 0.1e-3));
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Active region", mat_al, 0.1e-3, 1.1e-3));
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Vacuum right", mat_vac, 1.1e-3, 1.2e-3));
+
+                /* pulse */
+                auto tau = 100e15;
+                auto exp_pulse = std::make_shared<mbsolve::exp_pulse>(
+                    "exp", // name
+                    0.0, // position
+                    mbsolve::source::hard_source, // hard_source?
+                    5e8, // amplitude
+                    2e13, // frequency
+                    3.0 * tau, // phase: 3tau
+                    tau // tau
+                );
+
+                scen->add_source(exp_pulse);
+                 // QUESTION: how to show the result of average population
+                scen->add_record(std::make_shared<mbsolve::record>("e", 0, 0.0));
+
             }
 
         } else {
