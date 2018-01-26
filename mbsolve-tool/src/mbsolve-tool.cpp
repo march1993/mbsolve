@@ -171,12 +171,29 @@ relax_marskar(const Eigen::Matrix<mbsolve::complex, 6, 6>& arg)
     Eigen::Matrix<mbsolve::complex, 6, 6> ret =
         Eigen::Matrix<mbsolve::complex, 6, 6>::Zero();
 
+<<<<<<< HEAD
     ret(0, 0) = +1e10 * arg(1, 1);
     ret(1, 1) = -1e10 * arg(1, 1);
     ret(0, 1) = -1e10 * arg(0, 1);
     ret(1, 0) = -1e10 * arg(1, 0);
     // QUESTION 1
 >>>>>>> questions1234
+=======
+    // QUESTION 1: is it right?
+    ret *= 0.0;
+    ret(0, 0) = +1e12 * arg(0, 0);
+    ret(1, 1) = +1e12 * arg(1, 1);
+    ret(2, 2) = +1e12 * arg(2, 2);
+    ret(3, 3) = +1e12 * arg(3, 3);
+    ret(4, 5) = +1e12 * arg(4, 5);
+    ret(5, 5) = +1e12 * arg(5, 5);
+
+    ret(0, 1) = +1.0e12 * arg(0, 1);
+    ret(1, 2) = +1.1e12 * arg(1, 2);
+    ret(2, 3) = +1.2e12 * arg(2, 3);
+    ret(3, 4) = +1.3e12 * arg(3, 4);
+    ret(4, 5) = +1.4e12 * arg(4, 5);
+>>>>>>> update
 
     return ret;
 }
@@ -407,6 +424,7 @@ int main(int argc, char **argv)
                 Eigen::Matrix<mbsolve::complex, 6, 6> H, u, d_init;
 
                 // Hamiltonian
+                H *= 0.0;
                 H(0, 0) = 1;
                 for (auto n = 1; n <= 5; n++) {
                     H(n, n) = 1.0 - 0.1 * (n - 3);
@@ -414,9 +432,17 @@ int main(int argc, char **argv)
                 H = H * mbsolve::HBAR * 2 * M_PI * 2e13;
 
                 // dipole_op
-                // u = u * mbsolve::E0 * // QUESTION 2
+                // QUESTION 2: this it right? Unit?
+                // Cm used in marskar2011multilevel and ASM used in song2005
+                // should it be symmetric by main diagonal
+                u *= 0.0;
+                for (auto n = 0; n < 5; n++) {
+                    u(n, n + 1) = 10e-29;
+                    u(n + 1, n) = 10e-29;
+                }
 
                 // initial density matrix
+                d_init *= 0.0;
                 d_init(0, 0) = 0.60;
                 d_init(1, 1) = 0.23;
                 d_init(2, 2) = 0.096;
@@ -458,7 +484,7 @@ int main(int argc, char **argv)
                 );
 
                 scen->add_source(exp_pulse);
-                 // QUESTION: how to show the result of average population
+                 // QUESTION 3: how to show the result of average population
                 scen->add_record(std::make_shared<mbsolve::record>("e", 0, 0.0));
 
             }
