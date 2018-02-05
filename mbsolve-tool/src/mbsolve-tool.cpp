@@ -125,7 +125,6 @@ relax_sop_ziolk2(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     return ret;
 }
 
-<<<<<<< HEAD
 /* tzenov2018 absorber relaxation superoperator */
 Eigen::Matrix<mbsolve::complex, 2, 2>
 relax_sop_tzenov2018_abs(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
@@ -164,36 +163,58 @@ relax_sop_tzenov2018_gain(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     /* dephasing of coherence terms */
     ret(0, 1) = -dephasing_rate * arg(0, 1);
     ret(1, 0) = -dephasing_rate * arg(1, 0);
-=======
+
+    return ret;
+}
+
+
 Eigen::Matrix<mbsolve::complex, 6, 6>
 relax_marskar(const Eigen::Matrix<mbsolve::complex, 6, 6>& arg)
 {
     Eigen::Matrix<mbsolve::complex, 6, 6> ret =
         Eigen::Matrix<mbsolve::complex, 6, 6>::Zero();
 
-<<<<<<< HEAD
-    ret(0, 0) = +1e10 * arg(1, 1);
-    ret(1, 1) = -1e10 * arg(1, 1);
-    ret(0, 1) = -1e10 * arg(0, 1);
-    ret(1, 0) = -1e10 * arg(1, 0);
-    // QUESTION 1
->>>>>>> questions1234
-=======
-    // QUESTION 1: is it right?
-    ret *= 0.0;
-    ret(0, 0) = +1e12 * arg(0, 0);
-    ret(1, 1) = +1e12 * arg(1, 1);
-    ret(2, 2) = +1e12 * arg(2, 2);
-    ret(3, 3) = +1e12 * arg(3, 3);
-    ret(4, 5) = +1e12 * arg(4, 5);
-    ret(5, 5) = +1e12 * arg(5, 5);
+    static bool gamma_initialized = false;
+    static Eigen::Matrix<mbsolve::real, 6, 6> gamma;
 
-    ret(0, 1) = +1.0e12 * arg(0, 1);
-    ret(1, 2) = +1.1e12 * arg(1, 2);
-    ret(2, 3) = +1.2e12 * arg(2, 3);
-    ret(3, 4) = +1.3e12 * arg(3, 4);
-    ret(4, 5) = +1.4e12 * arg(4, 5);
->>>>>>> update
+    if (! gamma_initialized) {
+        gamma_initialized = true;
+        gamma.setZero();
+
+        gamma(0, 0) = 1e12;
+        gamma(1, 1) = 1e12;
+        gamma(2, 2) = 1e12;
+        gamma(3, 3) = 1e12;
+        gamma(4, 4) = 1e12;
+        gamma(5, 5) = 1e12;
+
+        gamma(0, 1) = 1.0 / (1.0e-12);
+        gamma(1, 2) = 1.0 / (1.1e-12);
+        gamma(2, 3) = 1.0 / (1.2e-12);
+        gamma(3, 4) = 1.0 / (1.3e-12);
+        gamma(4, 5) = 1.0 / (1.4e-12);
+    }
+
+    for (auto m = 0; m < 6; m++) {
+        for (auto n = 0; n < 6; n++) {
+
+            if (m == n) {
+                for (auto j = 0; j < 6; j++) {
+                    if (j != m) {
+                        ret(m, m) += gamma(m, j) * arg(j, j) - gamma(j, m) * arg(m, m);
+                    }
+                }
+            } else {
+                mbsolve::real coef = 0.0;
+                for (auto j = 0; j < 6; j++) {
+                    coef += gamma(j, m) + gamma(j, n);
+                }
+                ret(m, n) = -0.5 * coef * arg(m, n);
+            }
+
+
+        }
+    }
 
     return ret;
 }
@@ -424,7 +445,7 @@ int main(int argc, char **argv)
                 Eigen::Matrix<mbsolve::complex, 6, 6> H, u, d_init;
 
                 // Hamiltonian
-                H *= 0.0;
+                H.setZero();
                 H(0, 0) = 1;
                 for (auto n = 1; n <= 5; n++) {
                     H(n, n) = 1.0 - 0.1 * (n - 3);
@@ -432,17 +453,14 @@ int main(int argc, char **argv)
                 H = H * mbsolve::HBAR * 2 * M_PI * 2e13;
 
                 // dipole_op
-                // QUESTION 2: this it right? Unit?
-                // Cm used in marskar2011multilevel and ASM used in song2005
-                // should it be symmetric by main diagonal
-                u *= 0.0;
+                u.setZero();
                 for (auto n = 0; n < 5; n++) {
-                    u(n, n + 1) = 10e-29;
-                    u(n + 1, n) = 10e-29;
+                    u(n, n + 1) = 1e-29;
+                    u(n + 1, n) = 1e-29;
                 }
 
                 // initial density matrix
-                d_init *= 0.0;
+                d_init.setZero();
                 d_init(0, 0) = 0.60;
                 d_init(1, 1) = 0.23;
                 d_init(2, 2) = 0.096;
@@ -454,9 +472,9 @@ int main(int argc, char **argv)
                 sim_endtime = 2000e-15;
                 scen = std::make_shared<mbsolve::scenario>("Basic", num_gridpoints, sim_endtime);
 
-                // Na = 10e25
+                // Na = 1e25
                 auto qm = std::make_shared<mbsolve::qm_desc_clvl<6>>
-                    (10e25, H, u, &relax_marskar, d_init);
+                    (1e25, H, u, &relax_marskar, d_init);
 
                 auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
                 auto mat_al = std::make_shared<mbsolve::material>("AnharmonicLadder", qm);
@@ -472,7 +490,7 @@ int main(int argc, char **argv)
                             ("Vacuum right", mat_vac, 1.1e-3, 1.2e-3));
 
                 /* pulse */
-                auto tau = 100e15;
+                auto tau = 100e-15;
                 auto exp_pulse = std::make_shared<mbsolve::exp_pulse>(
                     "exp", // name
                     0.0, // position
@@ -484,7 +502,7 @@ int main(int argc, char **argv)
                 );
 
                 scen->add_source(exp_pulse);
-                 // QUESTION 3: how to show the result of average population
+
                 scen->add_record(std::make_shared<mbsolve::record>("e", 0, 0.0));
 
             }
