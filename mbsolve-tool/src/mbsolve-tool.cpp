@@ -469,7 +469,7 @@ int main(int argc, char **argv)
                 d_init(5, 5) = 0.01;
 
                 num_gridpoints = 32768;
-                sim_endtime = 2000e-15;
+                sim_endtime = 4e-12; // 4ps
                 scen = std::make_shared<mbsolve::scenario>("Basic", num_gridpoints, sim_endtime);
 
                 // Na = 1e25
