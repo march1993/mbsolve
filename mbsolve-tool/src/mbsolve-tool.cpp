@@ -478,6 +478,8 @@ int main(int argc, char **argv)
 
                 auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
                 auto mat_al = std::make_shared<mbsolve::material>("AnharmonicLadder", qm);
+                mbsolve::material::add_to_library(mat_vac);
+                mbsolve::material::add_to_library(mat_al);
 
                 /* set up device */
                 dev = std::make_shared<mbsolve::device>("Marskar");
