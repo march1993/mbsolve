@@ -11,6 +11,7 @@
 #@ error = wenhua2018a-marskar-$(schedd_host).$(jobid).$(stepid).out
 #@ notification=always
 #@ queue
+#@ notify_user = wenhua.shi@tum.de
 
 . /etc/profile
 . /etc/profile.d/modules.sh
@@ -40,7 +41,7 @@ mkdir -p $out_dir
 
 echo "Thread count: " $threads
 
-KMP_AFFINITY=granularity=fine,proclist=[`seq -s , 0 $(($threads - 1))`],explicit OMP_NUM_THREADS=$threads ../build-riesch2017b/mbsolve-tool/mbsolve-tool -m $method -d $device -w matlab -o $out_dir/$name.mat
+KMP_AFFINITY=granularity=fine,proclist=[`seq -s , 0 $(($threads - 1))`],explicit OMP_NUM_THREADS=$threads ../build-wenhua2018a/mbsolve-tool/mbsolve-tool -m $method -d $device -w matlab -o $out_dir/$name.mat
 
 done
 
