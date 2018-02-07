@@ -791,7 +791,9 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
 
             /* main loop */
             for (uint64_t n = 0; n <= num_timesteps/OL; n++) {
-                std::cout << "[" << n << "/" << num_timesteps/OL << "]" << std::endl;
+                if (tid == 0) {
+                    std::cout << "[" << n << "/" << num_timesteps/OL << "]" << std::endl;
+                }
 
                 /* handle loop remainder */
                 unsigned int subloop_ct = (n == num_timesteps/OL) ?
