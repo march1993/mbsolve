@@ -18,8 +18,8 @@
 module load boost/1.61_icc
 
 thread_s=1
-thread_e=40
 thread_i=39
+thread_e=40
 iterations=5
 
 # gridpoints=32768
