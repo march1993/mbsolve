@@ -505,7 +505,8 @@ int main(int argc, char **argv)
 
                 scen->add_source(exp_pulse);
 
-                scen->add_record(std::make_shared<mbsolve::record>("e", 0, 0.0));
+                scen->add_record(std::make_shared<mbsolve::record>("e", 0));
+                scen->add_record(std::make_shared<mbsolve::record>("d00", mbsolve::record::type::density, 0, 0));
 
             }
 
