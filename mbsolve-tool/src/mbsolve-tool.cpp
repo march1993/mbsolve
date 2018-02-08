@@ -507,11 +507,11 @@ int main(int argc, char **argv)
 
                 // scen->add_record(std::make_shared<mbsolve::record>("e", 0));
                 scen->add_record(std::make_shared<mbsolve::record>("d11", mbsolve::record::type::density, 1, 1, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d22", mbsolve::record::type::density, 1, 1, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d33", mbsolve::record::type::density, 1, 1, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d44", mbsolve::record::type::density, 1, 1, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d55", mbsolve::record::type::density, 1, 1, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d66", mbsolve::record::type::density, 1, 1, 4e-14));
+                scen->add_record(std::make_shared<mbsolve::record>("d22", mbsolve::record::type::density, 2, 2, 4e-14));
+                scen->add_record(std::make_shared<mbsolve::record>("d33", mbsolve::record::type::density, 3, 3, 4e-14));
+                scen->add_record(std::make_shared<mbsolve::record>("d44", mbsolve::record::type::density, 4, 4, 4e-14));
+                scen->add_record(std::make_shared<mbsolve::record>("d55", mbsolve::record::type::density, 5, 5, 4e-14));
+                scen->add_record(std::make_shared<mbsolve::record>("d66", mbsolve::record::type::density, 6, 6, 4e-14));
 
             }
 
