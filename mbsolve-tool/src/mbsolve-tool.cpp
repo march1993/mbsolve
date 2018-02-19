@@ -484,12 +484,16 @@ int main(int argc, char **argv)
                 /* set up device */
                 dev = std::make_shared<mbsolve::device>("Marskar");
                 // pad 10% of 1.0 millimeter to both side
+                /*
                 dev->add_region(std::make_shared<mbsolve::region>
                             ("Vacuum left", mat_vac, 0, 0.1e-3));
                 dev->add_region(std::make_shared<mbsolve::region>
                             ("Active region", mat_al, 0.1e-3, 1.1e-3));
                 dev->add_region(std::make_shared<mbsolve::region>
                             ("Vacuum right", mat_vac, 1.1e-3, 1.2e-3));
+                */
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Active region", mat_al, 0.0, 1.0e-3));
 
                 /* pulse */
                 auto tau = 100e-15;
@@ -505,15 +509,15 @@ int main(int argc, char **argv)
 
                 scen->add_source(exp_pulse);
 
-                scen->add_record(std::make_shared<mbsolve::record>("d11", mbsolve::record::type::density, 1, 1, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d22", mbsolve::record::type::density, 2, 2, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d33", mbsolve::record::type::density, 3, 3, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d44", mbsolve::record::type::density, 4, 4, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d55", mbsolve::record::type::density, 5, 5, 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("d66", mbsolve::record::type::density, 6, 6, 4e-14));
+                scen->add_record(std::make_shared<mbsolve::record>("d11", mbsolve::record::type::density, 1, 1, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d22", mbsolve::record::type::density, 2, 2, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d33", mbsolve::record::type::density, 3, 3, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d44", mbsolve::record::type::density, 4, 4, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d55", mbsolve::record::type::density, 5, 5, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d66", mbsolve::record::type::density, 6, 6, 4e-15));
 
-                scen->add_record(std::make_shared<mbsolve::record>("inv12", 4e-14));
-                scen->add_record(std::make_shared<mbsolve::record>("e", 4e-14));
+                scen->add_record(std::make_shared<mbsolve::record>("inv12", 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("e", 4e-15));
 
             }
 
