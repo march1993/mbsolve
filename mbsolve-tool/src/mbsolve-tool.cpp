@@ -193,6 +193,13 @@ relax_marskar(const Eigen::Matrix<mbsolve::complex, 6, 6>& arg)
         gamma(2, 3) = 1.0 / (1.2e-12);
         gamma(3, 4) = 1.0 / (1.3e-12);
         gamma(4, 5) = 1.0 / (1.4e-12);
+
+        gamma(1, 0) = 3.82950e+11;
+        gamma(2, 1) = 3.77127e+11;
+        gamma(3, 2) = 3.74488e+11;
+        gamma(4, 3) = 3.74467e+11;
+        gamma(5, 4) = 3.76675e+11;
+
     }
 
     for (auto m = 0; m < 6; m++) {
@@ -446,9 +453,9 @@ int main(int argc, char **argv)
 
                 // Hamiltonian
                 H.setZero();
-                H(0, 0) = 1;
+                H(0, 0) = 0;
                 for (auto n = 1; n <= 5; n++) {
-                    H(n, n) = 1.0 - 0.1 * (n - 3);
+                    H(n, n) = 1.0 - 0.1 * (n - 3) + H(n - 1, n - 1);
                 }
                 H = H * mbsolve::HBAR * 2 * M_PI * 1e13;
 
