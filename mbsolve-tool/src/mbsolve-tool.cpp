@@ -450,7 +450,7 @@ int main(int argc, char **argv)
                 for (auto n = 1; n <= 5; n++) {
                     H(n, n) = 1.0 - 0.1 * (n - 3);
                 }
-                H = H * mbsolve::HBAR * 2 * M_PI * 2e13;
+                H = H * mbsolve::HBAR * 2 * M_PI * 1e13;
 
                 // dipole_op
                 u.setZero();
