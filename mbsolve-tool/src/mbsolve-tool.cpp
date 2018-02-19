@@ -483,8 +483,8 @@ int main(int argc, char **argv)
 
                 /* set up device */
                 dev = std::make_shared<mbsolve::device>("Marskar");
-                // pad 10% of 1.0 millimeter to both side
                 /*
+                // pad 10% of 1.0 millimeter to both side
                 dev->add_region(std::make_shared<mbsolve::region>
                             ("Vacuum left", mat_vac, 0, 0.1e-3));
                 dev->add_region(std::make_shared<mbsolve::region>
@@ -502,7 +502,7 @@ int main(int argc, char **argv)
                     0.0, // position
                     mbsolve::source::hard_source, // hard_source?
                     5e8, // amplitude
-                    2e13, // frequency
+                    1e13, // frequency
                     3.0 * tau, // phase: 3tau
                     tau // tau
                 );
