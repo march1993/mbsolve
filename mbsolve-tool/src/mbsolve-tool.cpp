@@ -455,7 +455,7 @@ int main(int argc, char **argv)
                 H.setZero();
                 H(0, 0) = 0;
                 for (auto n = 1; n <= 5; n++) {
-                    H(n, n) = 1.0 - 0.1 * (n - 3) + H(n - 1, n - 1);
+                    H(n, n) = 1.0 - 0.1 * (n - 3 - 1) + H(n - 1, n - 1);
                 }
                 H = H * mbsolve::HBAR * 2 * M_PI * 1e13;
 
