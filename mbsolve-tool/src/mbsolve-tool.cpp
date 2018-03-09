@@ -463,7 +463,7 @@ int main(int argc, char **argv)
                 u.setZero();
                 for (auto n = 0; n < 5; n++) {
                     u(n, n + 1) = 1e-29;
-                    // u(n + 1, n) = 1e-29;
+                    u(n + 1, n) = 1e-29;
                 }
 
                 // initial density matrix
