@@ -55,7 +55,10 @@ fill_rodr_coeff(const Eigen::Matrix<complex, num_adj, num_adj>& eigenvec,
     std::iota(perm_idx.begin(), perm_idx.end(), 0);
     std::sort(perm_idx.begin(), perm_idx.end(),
               [&eigenval](size_t i1, size_t i2) {
-                  return (std::abs(eigenval(i1)) > std::abs(eigenval(i2)));
+                auto imag1 = eigenval(i1).imag(), imag2 = eigenval(i2).imag();
+                imag1 = imag1 > 0 ? imag1 : -imag1;
+                imag2 = imag2 > 0 ? imag2 : -imag2;
+                  return imag1 > imag2;
               });
 
     /* sort eigenvectors */
@@ -71,9 +74,7 @@ fill_rodr_coeff(const Eigen::Matrix<complex, num_adj, num_adj>& eigenvec,
             (-eigenvec.col(i1) + eigenvec.col(i2)).imag();
     }
     if (num_adj % 2 != 0) {
-        // Q(num_adj - 1, num_adj - 1) = 1.0;
-        std::cout << "Last eigenvec: " << eigenvec.col(perm_idx[num_adj - 1])  << std::endl;
-        Q.col(num_adj - 1) = 1.0/sqrt(2) * eigenvec.col(perm_idx[num_adj - 1]).real();
+        Q(num_adj - 1, num_adj - 1) = 1.0;
     }
 
     /* TODO optimize
@@ -102,23 +103,6 @@ fill_rodr_coeff(const Eigen::Matrix<complex, num_adj, num_adj>& eigenvec,
 
         std::cout << "theta: "<< std::endl << sc.theta[i] << std::endl;
         std::cout << "b = " << std::endl << b << std::endl;
-    }
-    if (num_adj % 2 != 0) {
-        int i = num_adj - 1;
-
-        unsigned int i1 = perm_idx[i];
-        Eigen::Matrix<real, num_adj, num_adj> b =
-            Eigen::Matrix<real, num_adj, num_adj>::Zero();
-        std::cout << "Eigenvalues standalone: " << eigenval(i1) << std::endl;
-        sc.theta[i] = std::abs(eigenval(i1));
-        b(2 * i, 2 * i + 1) = -1.0;
-        b(2 * i + 1, 2 * i) = +1.0;
-        sc.coeff_1[i] = Q * b * Q.transpose();
-        sc.coeff_2[i] = Q * b * b * Q.transpose();
-
-        std::cout << "theta: "<< std::endl << sc.theta[i] << std::endl;
-        std::cout << "b = " << std::endl << b << std::endl;
-
     }
 }
 
@@ -672,7 +656,7 @@ mat_exp(const sim_constants_clvl_os<num_lvl>& s, real e)
             Eigen::Matrix<real, num_adj, num_adj>::Identity();
     } else {
         ret = Eigen::Matrix<real, num_adj, num_adj>::Identity();
-        for (int i = 0; i < (num_adj+1)/2; i++) {
+        for (int i = 0; i < num_adj/2; i++) {
             /* TODO nolias()? */
             ret += sin(s.theta[i] * e * s.d_t) * s.coeff_1[i] +
                 (1 - cos(s.theta[i] * e * s.d_t)) * s.coeff_2[i];
