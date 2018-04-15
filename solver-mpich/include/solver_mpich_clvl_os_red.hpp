@@ -100,6 +100,14 @@ class solver_mpich_clvl_os_red : public solver_int
     typedef Eigen::Matrix<complex, num_adj, num_adj> complex_matrix_t;
     typedef Eigen::Matrix<real, num_adj, num_adj> real_matrix_t;
     typedef Eigen::Matrix<real, num_adj, 1> real_vector_t;
+    template<unsigned int OL>
+    struct sync_body {
+        real e[OL];
+        real h[OL];
+        real_vector_t d[OL];
+    };
+
+
 
 public:
     solver_mpich_clvl_os_red(std::shared_ptr<const device> dev,
@@ -114,34 +122,39 @@ public:
 private:
     const std::string m_name;
 
-    /* TODO: rule of three. make copy constructor etc. private?
-     * or implement correctly
-     */
+    int world_size;
+    int world_rank;
 
     /*
      * Position-dependent density matrix in adjoint representation.
      */
-    real_vector_t **m_d;
+    real_vector_t *t_d;
 
     std::vector<qm_operator_t > m_generators;
 
-    real **m_h;
-    real **m_e;
-    real **m_p;
+    real *t_h;
+    real *t_e;
+    real *t_p;
 
     real *m_result_scratch;
+
+    // sync_record[counter+1], the offset of the first dummy element is used to indicate the length of array
+    struct sync_record {
+        int64_t offset;
+        real value;
+    };
+    size_t t_sync_record_size;
+    sync_record *t_sync_record;
+    void write_sync_record(size_t offset, real value) const;
 
     uint64_t m_scratch_size;
 
     real *m_source_data;
 
-    unsigned int **m_mat_indices;
+    unsigned int *t_mat_indices;
 
-#ifdef XEON_PHI_OFFLOAD
-    copy_list_entry_dev *l_copy_list;
-#else
     copy_list_entry *l_copy_list;
-#endif
+
     sim_source *l_sim_sources;
     sim_constants_clvl_os<num_lvl> *l_sim_consts;
 

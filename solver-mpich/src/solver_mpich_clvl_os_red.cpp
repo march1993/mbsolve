@@ -22,6 +22,7 @@
 #define EIGEN_DONT_PARALLELIZE
 #define EIGEN_NO_MALLOC
 
+#include <mpi.h>
 #include <numeric>
 #include <Eigen/Eigenvalues>
 #include <Eigen/Sparse>
@@ -108,12 +109,8 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
     solver_int(dev, scen),
     m_name("mpich-" + std::to_string(num_lvl) + "lvl-os-red")
 {
-    /* TODO: scenario, device sanity check */
-
-    /* TODO: solver params
-     * courant number
-     * overlap
-     */
+    // Initialize the MPI environment
+    MPI_Init(NULL, NULL);
 
     Eigen::initParallel();
     Eigen::setNbThreads(1);
@@ -286,14 +283,10 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
     }
 
     /* set up indices array and initialize data arrays */
-    unsigned int P = omp_get_max_threads();
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    std::cout << "Number of threads: " << P << std::endl;
-    m_d = new Eigen::Matrix<real, num_adj, 1>*[P];
-    m_e = new real*[P];
-    m_h = new real*[P];
-    m_p = new real*[P];
-    m_mat_indices = new unsigned int*[P];
+    std::cout << "Number of threads: " << world_size << std::endl;
 
     unsigned int *l_mat_indices = new unsigned int[scen->get_num_gridpoints()];
 
@@ -310,6 +303,7 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
         l_mat_indices[i] = mat_idx;
     }
 
+
     /* set up results and transfer data structures */
     uint64_t scratch_size = 0;
     for (const auto& rec : scen->get_records()) {
@@ -318,8 +312,10 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
 
         std::cout << "Rows: " << entry.get_rows() << " Cols: " << entry.get_cols() << std::endl;
 
-        /* add result to solver */
-        m_results.push_back(entry.get_result());
+        /* MASTER ONLY: add result to solver */
+        if (world_rank == 0) {
+            m_results.push_back(entry.get_result());
+        }
 
         /* calculate scratch size */
         scratch_size += entry.get_size();
@@ -337,9 +333,12 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
         m_copy_list.push_back(entry);
     }
 
-    /* allocate scratchpad result memory */
-    m_result_scratch = (real *) mb_aligned_alloc(sizeof(real) * scratch_size);
-    m_scratch_size = scratch_size;
+    /* MASTER ONLY */
+    if (world_rank == 0) {
+        /* allocate scratchpad result memory */
+        m_result_scratch = (real *) mb_aligned_alloc(sizeof(real) * scratch_size);
+        m_scratch_size = scratch_size;
+    }
 
     /* create source data */
     m_source_data = new real[scen->get_num_timesteps() *
@@ -362,8 +361,8 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
     }
 
     uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
-    uint64_t chunk_base = m_scenario->get_num_gridpoints()/P;
-    uint64_t chunk_rem = m_scenario->get_num_gridpoints() % P;
+    uint64_t chunk_base = m_scenario->get_num_gridpoints()/ world_size;
+    uint64_t chunk_rem = m_scenario->get_num_gridpoints() % world_size;
     uint64_t num_timesteps = m_scenario->get_num_timesteps();
 
 
@@ -371,76 +370,52 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
     l_sim_consts = m_sim_consts.data();
     l_sim_sources = m_sim_sources.data();
 
-        for (unsigned int tid = 0; tid < P; tid++) {
-            unsigned int chunk = chunk_base;
 
-            if (tid == P - 1) {
-                chunk += chunk_rem;
-            }
+    unsigned int chunk = chunk_base;
 
-            /* allocation */
-            uint64_t size = chunk + 2 * OL;
+    if (world_rank == world_size - 1) {
+        chunk += chunk_rem;
+    }
 
-            m_d[tid] = (Eigen::Matrix<real, num_adj, 1> *)
-                mb_aligned_alloc(size *
-                                 sizeof(Eigen::Matrix<real, num_adj, 1>));
-            m_h[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-            m_e[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-            m_p[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-            m_mat_indices[tid] = (unsigned int *)
-                mb_aligned_alloc(size * sizeof(unsigned int));
+    t_sync_record_size = m_copy_list.size() * OL * (chunk_base + chunk_rem);
+    t_sync_record = new sync_record[t_sync_record_size + 1];
+
+
+    /* allocation */
+    uint64_t size = chunk + 2 * OL;
+
+    t_d = (Eigen::Matrix<real, num_adj, 1> *)
+        mb_aligned_alloc(size *
+                         sizeof(Eigen::Matrix<real, num_adj, 1>));
+    t_h = (real *) mb_aligned_alloc(size * sizeof(real));
+    t_e = (real *) mb_aligned_alloc(size * sizeof(real));
+    t_p = (real *) mb_aligned_alloc(size * sizeof(real));
+    t_mat_indices = (unsigned int *) mb_aligned_alloc(size * sizeof(unsigned int));
+
+    __mb_assume_aligned(t_d);
+    __mb_assume_aligned(t_e);
+    __mb_assume_aligned(t_p);
+    __mb_assume_aligned(t_h);
+    __mb_assume_aligned(t_mat_indices);
+
+    for (int i = 0; i < size; i++) {
+        uint64_t global_idx = world_rank * chunk_base + (i - OL);
+        if ((global_idx >= 0) && (global_idx < num_gridpoints)) {
+            unsigned int mat_idx = l_mat_indices[global_idx];
+            t_mat_indices[i] = mat_idx;
+
+            t_d[i] = l_sim_consts[mat_idx].d_init;
+        } else {
+            t_mat_indices[i] = 0;
+
+            t_d[i] = Eigen::Matrix<real, num_adj, 1>::Zero();
         }
+        t_e[i] = 0.0;
+        t_p[i] = 0.0;
+        t_h[i] = 0.0;
+    }
 
-#pragma omp parallel
-        {
-            /* TODO serial alloc necessary?
-             *
-             */
-
-            unsigned int tid = omp_get_thread_num();
-            uint64_t chunk = chunk_base;
-
-            if (tid == P - 1) {
-                chunk += chunk_rem;
-            }
-
-            /* allocation */
-            uint64_t size = chunk + 2 * OL;
-
-            Eigen::Matrix<real, num_adj, 1> *t_d;
-            real *t_h, *t_e, *t_p;
-            unsigned int *t_mat_indices;
-
-            t_d = m_d[tid];
-            t_h = m_h[tid];
-            t_e = m_e[tid];
-            t_p = m_p[tid];
-            t_mat_indices = m_mat_indices[tid];
-
-            __mb_assume_aligned(t_d);
-            __mb_assume_aligned(t_e);
-            __mb_assume_aligned(t_p);
-            __mb_assume_aligned(t_h);
-            __mb_assume_aligned(t_mat_indices);
-
-            for (int i = 0; i < size; i++) {
-                uint64_t global_idx = tid * chunk_base + (i - OL);
-                if ((global_idx >= 0) && (global_idx < num_gridpoints)) {
-                    unsigned int mat_idx = l_mat_indices[global_idx];
-                    t_mat_indices[i] = mat_idx;
-
-                    t_d[i] = l_sim_consts[mat_idx].d_init;
-                } else {
-                    t_mat_indices[i] = 0;
-
-                    t_d[i] = Eigen::Matrix<real, num_adj, 1>::Zero();
-                }
-                t_e[i] = 0.0;
-                t_p[i] = 0.0;
-                t_h[i] = 0.0;
-            }
-#pragma omp barrier
-        }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     delete[] l_mat_indices;
 }
@@ -454,26 +429,21 @@ solver_mpich_clvl_os_red<num_lvl>::~solver_mpich_clvl_os_red()
     uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
     uint64_t num_timesteps = m_scenario->get_num_timesteps();
 
-#pragma omp parallel
-        {
-            unsigned int tid = omp_get_thread_num();
+    mb_aligned_free(t_h);
+    mb_aligned_free(t_e);
+    mb_aligned_free(t_p);
+    mb_aligned_free(t_d);
+    mb_aligned_free(t_mat_indices);
 
-            mb_aligned_free(m_h[tid]);
-            mb_aligned_free(m_e[tid]);
-            mb_aligned_free(m_p[tid]);
-            mb_aligned_free(m_d[tid]);
-            mb_aligned_free(m_mat_indices[tid]);
-        }
-
-
-    mb_aligned_free(m_result_scratch);
+    /* MASTER ONLY */
+    if (world_rank == 0) {
+        mb_aligned_free(m_result_scratch);
+    }
     delete[] m_source_data;
+    delete[] t_sync_record;
 
-    delete[] m_h;
-    delete[] m_e;
-    delete[] m_p;
-    delete[] m_d;
-    delete[] m_mat_indices;
+    // Finalize the MPI environment.
+    MPI_Finalize();
 }
 
 template<unsigned int num_lvl>
@@ -490,7 +460,6 @@ update_fdtd(uint64_t size, unsigned int border, real *t_e, real *t_p,
             unsigned int *t_mat_indices,
             sim_constants_clvl_os<num_lvl> *l_sim_consts)
 {
-#pragma omp simd aligned(t_d, t_e, t_p, t_h, t_mat_indices : ALIGN)
     for (int i = border; i < size - border - 1; i++) {
         int mat_idx = t_mat_indices[i];
 
@@ -514,7 +483,6 @@ update_h(unsigned int size, unsigned int border, real *t_e, real *t_p,
             unsigned int *t_mat_indices,
             sim_constants_clvl_os<num_lvl> *l_sim_consts)
 {
-#pragma omp simd aligned(t_d, t_e, t_p, t_h, t_mat_indices : ALIGN)
     for (int i = border; i < size - border - 1; i++) {
         int mat_idx = t_mat_indices[i];
 
@@ -591,7 +559,6 @@ update_d(uint64_t size, unsigned int border, real *t_e, real *t_p,
          unsigned int *t_mat_indices,
          sim_constants_clvl_os<num_lvl> *l_sim_consts)
 {
-    //#pragma omp simd aligned(t_d, t_e, t_mat_indices : ALIGN)
     for (int i = border; i < size - border - 1; i++) {
         int mat_idx = t_mat_indices[i];
 
@@ -631,6 +598,20 @@ update_d(uint64_t size, unsigned int border, real *t_e, real *t_p,
 }
 
 template<unsigned int num_lvl>
+inline void
+solver_mpich_clvl_os_red<num_lvl>::write_sync_record(size_t offset, real value) const {
+    size_t recorder_counter = t_sync_record[0].offset;
+
+    if (recorder_counter >= t_sync_record_size) {
+        throw std::invalid_argument("Too many results");
+    } else {
+        t_sync_record[1 + recorder_counter].offset = offset;
+        t_sync_record[1 + recorder_counter].value = value;
+        t_sync_record[0].offset += 1;
+    }
+};
+
+template<unsigned int num_lvl>
 void
 solver_mpich_clvl_os_red<num_lvl>::run() const
 {
@@ -642,199 +623,255 @@ solver_mpich_clvl_os_red<num_lvl>::run() const
     unsigned int num_sources = m_sim_sources.size();
     unsigned int num_copy = m_copy_list.size();
 
-#pragma omp parallel
-        {
-            unsigned int tid = omp_get_thread_num();
-            uint64_t chunk = chunk_base;
-            if (tid == P - 1) {
-                chunk += chunk_rem;
-            }
-            uint64_t size = chunk + 2 * OL;
 
-            /* gather pointers */
-            Eigen::Matrix<real, num_adj, 1> *t_d;
-            real *t_h, *t_e, *t_p;
-            unsigned int *t_mat_indices;
+    uint64_t chunk = chunk_base;
+    if (world_rank == world_size - 1) {
+        chunk += chunk_rem;
+    }
 
-            t_d = m_d[tid];
-            t_h = m_h[tid];
-            t_e = m_e[tid];
-            t_p = m_p[tid];
-            t_mat_indices = m_mat_indices[tid];
+    uint64_t size = chunk + 2 * OL;
 
-            __mb_assume_aligned(t_d);
-            __mb_assume_aligned(t_e);
-            __mb_assume_aligned(t_p);
-            __mb_assume_aligned(t_h);
-            __mb_assume_aligned(t_mat_indices);
+    if (world_rank == 0) {
+        __mb_assume_aligned(m_result_scratch);
+    }
 
-            __mb_assume_aligned(m_result_scratch);
+    /* gather prev and next pointers from other threads */
+    Eigen::Matrix<real, num_adj, 1> n_d[OL], p_d[OL];
+    real n_h[OL], n_e[OL];
+    real p_h[OL], p_e[OL];
 
-            /* gather prev and next pointers from other threads */
-            Eigen::Matrix<real, num_adj, 1> *n_d, *p_d;
-            real *n_h, *n_e;
-            real *p_h, *p_e;
+    __mb_assume_aligned(p_d);
+    __mb_assume_aligned(p_e);
+    __mb_assume_aligned(p_h);
 
-            __mb_assume_aligned(p_d);
-            __mb_assume_aligned(p_e);
-            __mb_assume_aligned(p_h);
+    __mb_assume_aligned(n_d);
+    __mb_assume_aligned(n_e);
+    __mb_assume_aligned(n_h);
 
-            __mb_assume_aligned(n_d);
-            __mb_assume_aligned(n_e);
-            __mb_assume_aligned(n_h);
 
-            if (tid > 0) {
-                p_d = m_d[tid - 1];
-                p_h = m_h[tid - 1];
-                p_e = m_e[tid - 1];
-            }
+    /* main loop */
+    for (uint64_t n = 0; n <= num_timesteps/OL; n++) {
+        if (world_rank == 0) {
+            std::cout << "[" << n << "/" << num_timesteps/OL << "]" << std::endl;
+        }
 
-            if (tid < P - 1) {
-                n_d = m_d[tid + 1];
-                n_h = m_h[tid + 1];
-                n_e = m_e[tid + 1];
-            }
+        /* handle loop remainder */
+        unsigned int subloop_ct = (n == num_timesteps/OL) ?
+            num_timesteps % OL : OL;
 
-            /* main loop */
-            for (uint64_t n = 0; n <= num_timesteps/OL; n++) {
-                if (tid == 0) {
-                    std::cout << "[" << n << "/" << num_timesteps/OL << "]" << std::endl;
+        /* exchange data */
+        /* 1. even send data to odd in the right */
+        /* 2. even recv data from odd in the right */
+        /* 3. even send data to odd in the left */
+        /* 4. even recv data from odd in the left */
+
+        sync_body<OL> body;
+        /* 1. even send data to odd in the right */
+        if (world_rank % 2 == 0) {
+            if ((world_rank + 1) < world_size) {
+                for (unsigned int i = 0; i < OL; i++) {
+                    body.d[i] = t_d[OL + chunk_base + i];
+                    body.e[i] = t_e[OL + chunk_base + i];
+                    body.h[i] = t_h[OL + chunk_base + i];
                 }
-
-                /* handle loop remainder */
-                unsigned int subloop_ct = (n == num_timesteps/OL) ?
-                    num_timesteps % OL : OL;
-
-                /* exchange data */
-                if (tid > 0) {
-#pragma ivdep
-                    for (unsigned int i = 0; i < OL; i++) {
-                        t_d[i] = p_d[chunk_base + i];
-                        t_e[i] = p_e[chunk_base + i];
-                        t_h[i] = p_h[chunk_base + i];
-                    }
+                MPI_Send(&body, sizeof(body), MPI_BYTE, world_rank + 1, 0, MPI_COMM_WORLD);
+            }
+        } else {
+            if (world_rank > 0) {
+                MPI_Recv(&body, sizeof(body), MPI_BYTE, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                for (unsigned int i = 0; i < OL; i++) {
+                    t_d[i] = body.d[i];
+                    t_e[i] = body.e[i];
+                    t_h[i] = body.h[i];
                 }
-
-                if (tid < P - 1) {
-#pragma ivdep
-                    for (unsigned int i = 0; i < OL; i++) {
-                        t_d[OL + chunk_base + i] = n_d[OL + i];
-                        t_e[OL + chunk_base + i] = n_e[OL + i];
-                        t_h[OL + chunk_base + i] = n_h[OL + i];
-                    }
+            }
+        }
+        /* 2. even recv data from odd in the right */
+        if (world_rank % 2 == 0) {
+            if ((world_rank + 1) < world_size) {
+                MPI_Recv(&body, sizeof(body), MPI_BYTE, world_rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                for (unsigned int i = 0; i < OL; i++) {
+                    t_d[OL + chunk_base + i] = body.d[i];
+                    t_e[OL + chunk_base + i] = body.e[i];
+                    t_h[OL + chunk_base + i] = body.h[i];
                 }
+            }
+        } else {
+            if (world_rank > 0) {
+                for (unsigned int i = 0; i < OL; i++) {
+                    body.d[i] = t_d[i];
+                    body.e[i] = t_e[i];
+                    body.h[i] = t_h[i];
+                }
+                MPI_Send(&body, sizeof(body), MPI_BYTE, world_rank - 1, 0, MPI_COMM_WORLD);
+            }
+        }
+        /* 3. even send data to odd in the left */
+        if (world_rank % 2 == 0) {
+            if (world_rank > 0) {
+                for (unsigned int i = 0; i < OL; i++) {
+                    body.d[i] = t_d[i];
+                    body.e[i] = t_e[i];
+                    body.h[i] = t_h[i];
+                }
+                MPI_Send(&body, sizeof(body), MPI_BYTE, world_rank - 1, 0, MPI_COMM_WORLD);
+            }
+        } else {
+            if ((world_rank + 1) < world_size) {
+                MPI_Recv(&body, sizeof(body), MPI_BYTE, world_rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                for (unsigned int i = 0; i < OL; i++) {
+                    t_d[OL + chunk_base + i] = body.d[i];
+                    t_e[OL + chunk_base + i] = body.e[i];
+                    t_h[OL + chunk_base + i] = body.h[i];
+                }
+            }
+        }
+        /* 4. even recv data from odd in the left */
+        if (world_rank % 2 == 0) {
+            if (world_rank > 0) {
+                MPI_Recv(&body, sizeof(body), MPI_BYTE, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                for (unsigned int i = 0; i < OL; i++) {
+                    t_d[i] = body.d[i];
+                    t_e[i] = body.e[i];
+                    t_h[i] = body.h[i];
+                }
+            }
+        } else {
+            if ((world_rank + 1) < world_size) {
+                for (unsigned int i = 0; i < OL; i++) {
+                    body.d[i] = t_d[OL + chunk_base + i];
+                    body.e[i] = t_e[OL + chunk_base + i];
+                    body.h[i] = t_h[OL + chunk_base + i];
+                }
+                MPI_Send(&body, sizeof(body), MPI_BYTE, world_rank + 1, 0, MPI_COMM_WORLD);
+            }
+        }
 
-                /* sync after communication */
-#pragma omp barrier
+        /* sync after communication */
+        MPI_Barrier(MPI_COMM_WORLD);
 
-                /* sub-loop */
-                for (unsigned int m = 0; m < subloop_ct; m++) {
-                    /* align border to vector length */
-                    unsigned int border = m - (m % VEC);
+        /* sub-loop */
+        /* clear sync records */
+        t_sync_record[0].offset = 0;
+        for (unsigned int m = 0; m < subloop_ct; m++) {
+            /* align border to vector length */
+            unsigned int border = m - (m % VEC);
 
-                    /* update d */
-                    update_d<num_lvl, num_adj>(size, border, t_e, t_p, t_d,
-                                               t_mat_indices, l_sim_consts);
+            /* update d */
+            update_d<num_lvl, num_adj>(size, border, t_e, t_p, t_d,
+                                       t_mat_indices, l_sim_consts);
 
-                     /* update e + h with fdtd */
-                    update_fdtd<num_lvl, num_adj>(size, border, t_e, t_p, t_h,
-                                                  t_d, t_mat_indices,
-                                                  l_sim_consts);
+             /* update e + h with fdtd */
+            update_fdtd<num_lvl, num_adj>(size, border, t_e, t_p, t_h,
+                                          t_d, t_mat_indices,
+                                          l_sim_consts);
 
-                    /* apply sources */
-                    apply_sources(t_e, m_source_data, num_sources,
-                                  l_sim_sources, n * OL + m, tid * chunk_base,
-                                  chunk);
+            /* apply sources */
+            apply_sources(t_e, m_source_data, num_sources,
+                          l_sim_sources, n * OL + m, world_rank * chunk_base,
+                          chunk);
 
-                   update_h<num_lvl, num_adj>(size, border, t_e, t_p, t_h,
-                                              t_d, t_mat_indices,
-                                              l_sim_consts);
+            update_h<num_lvl, num_adj>(size, border, t_e, t_p, t_h,
+                                       t_d, t_mat_indices,
+                                       l_sim_consts);
 
 
-                    /* apply field boundary condition */
-                    if (tid == 0) {
-                        t_h[OL] = 0;
-                    }
-                    if (tid == P - 1) {
-                        t_h[OL + chunk] = 0;
-                    }
+            /* apply field boundary condition */
+            if (world_rank == 0) {
+                t_h[OL] = 0;
+            }
+            if (world_rank == world_size - 1) {
+                t_h[OL + chunk] = 0;
+            }
 
-                    /* save results to scratchpad in parallel */
-                    for (int k = 0; k < num_copy; k++) {
-                        if (l_copy_list[k].hasto_record(n * OL + m)) {
-                            uint64_t pos = l_copy_list[k].get_position();
-                            uint64_t cols = l_copy_list[k].get_cols();
-                            uint64_t ridx = l_copy_list[k].get_row_idx();
-                            uint64_t cidx = l_copy_list[k].get_col_idx();
-                            record::type t = l_copy_list[k].get_type();
+            /* save records to buffer */
+            for (int k = 0; k < num_copy; k++) {
+                if (l_copy_list[k].hasto_record(n * OL + m)) {
+                    uint64_t pos = l_copy_list[k].get_position();
+                    uint64_t cols = l_copy_list[k].get_cols();
+                    uint64_t ridx = l_copy_list[k].get_row_idx();
+                    uint64_t cidx = l_copy_list[k].get_col_idx();
+                    record::type t = l_copy_list[k].get_type();
 
-                            int64_t base_idx = tid * chunk_base - OL;
-                            int64_t off_r = l_copy_list[k].get_offset_scratch_real
-                                (n * OL + m, base_idx - pos);
+                    int64_t base_idx = world_rank * chunk_base - OL;
+                    int64_t off_r = l_copy_list[k].get_offset_scratch_real
+                        (n * OL + m, base_idx - pos);
 
-#pragma omp simd
-                            for (uint64_t i = OL; i < chunk + OL; i++) {
-                                int64_t idx = base_idx + i;
-                                if ((idx >= pos) && (idx < pos + cols)) {
-                                    if (t == record::type::electric) {
-                                        m_result_scratch[off_r + i] = t_e[i];
-                                    } else if (t == record::type::magnetic) {
-                                        m_result_scratch[off_r + i] = t_h[i];
-                                    } else if (t == record::type::inversion) {
-                                        m_result_scratch[off_r + i] =
-                                            t_d[i](num_lvl * (num_lvl - 1));
-                                    } else if (t == record::type::density) {
 
-                                        /* right now only populations */
-                                        real temp = 1.0/num_lvl;
-                                        for (int l = num_lvl * (num_lvl - 1);
-                                             l < num_adj; l++) {
-                                            temp += 0.5 * t_d[i](l) *
-                                                m_generators[l](ridx, cidx).real();
-                                        }
-                                        m_result_scratch[off_r + i] = temp;
+                    for (uint64_t i = OL; i < chunk + OL; i++) {
+                        int64_t idx = base_idx + i;
+                        if ((idx >= pos) && (idx < pos + cols)) {
+                            if (t == record::type::electric) {
+                                write_sync_record(off_r + i, t_e[i]);
+                            } else if (t == record::type::magnetic) {
+                                write_sync_record(off_r + i, t_h[i]);
+                            } else if (t == record::type::inversion) {
+                                write_sync_record(off_r + i, t_d[i](num_lvl * (num_lvl - 1)));
+                            } else if (t == record::type::density) {
 
-                                        /* TODO: coherences
-                                         * remove 1/3
-                                         * consider only two/one corresponding
-                                         * entry */
-
-                                    } else {
-                                        /* TODO handle trouble */
-
-                                        /* TODO calculate regular populations */
-                                    }
+                                /* right now only populations */
+                                real temp = 1.0/num_lvl;
+                                for (int l = num_lvl * (num_lvl - 1);
+                                     l < num_adj; l++) {
+                                    temp += 0.5 * t_d[i](l) *
+                                        m_generators[l](ridx, cidx).real();
                                 }
+                                write_sync_record(off_r + i, temp);
+
+                                /* TODO: coherences
+                                 * remove 1/3
+                                 * consider only two/one corresponding
+                                 * entry */
+
+                            } else {
+                                /* TODO handle trouble */
+
+                                /* TODO calculate regular populations */
                             }
-
-                            /*
-                             *(m_result_scratch +
-                             l_copy_list[k].get_scratch_real
-                             (n * OL + m, idx - pos)) =
-                             *l_copy_list[k].get_real(i, tid);
-                             /*        if (cle.is_complex()) {
-                             *cle.get_scratch_imag(n * OL + m,
-                             idx - pos) =
-                             *cle.get_imag(i, tid);
-                             }*/
-
                         }
                     }
-                } /* end sub loop */
 
-                /* sync after computation */
-#pragma omp barrier
-            } /* end main foor loop */
+                }
+            }
 
-        } /* end mpich region */
+
+        } /* end sub loop */
+
+        /* sync records */
+        if (world_rank == 0) {
+            // save master's own records
+            for (size_t i = 0; i < t_sync_record[0].offset; i++) {
+                m_result_scratch[t_sync_record[1 + i].offset] = t_sync_record[1 + i].value;
+            }
+
+            // recv other process's records
+            // std::cout << "receiving data..." << t_sync_record_size << std::endl;
+            for (int i = 1; i < world_size; i++) {
+                MPI_Recv(t_sync_record, sizeof(sync_record) * (1 + t_sync_record_size), MPI_BYTE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                std::cout << "getting " << t_sync_record[0].offset << " records from process " << i << std::endl;
+                for (size_t j = 0; j < t_sync_record[0].offset; j++) {
+                    m_result_scratch[t_sync_record[1 + i].offset] = t_sync_record[1 + i].value;
+                }
+            }
+        } else {
+            // std::cout << "sending data..." << (1 + t_sync_record[0].offset) << std::endl;
+            MPI_Send(t_sync_record, sizeof(sync_record) * (1 + t_sync_record[0].offset), MPI_BYTE, 0, 0, MPI_COMM_WORLD);
+        }
+
+        /* sync after computation */
+        MPI_Barrier(MPI_COMM_WORLD);
+    } /* end main foor loop */
+
 
     /* bulk copy results into result classes */
-    for (const auto& cle : m_copy_list) {
-        real *dr = m_result_scratch + cle.get_offset_scratch_real(0, 0);
-        std::copy(dr, dr + cle.get_size(), cle.get_result_real(0, 0));
-        if (cle.is_complex()) {
-            real *di = m_result_scratch + cle.get_offset_scratch_imag(0, 0);
-            std::copy(di, di + cle.get_size(), cle.get_result_imag(0, 0));
+    if (world_rank == 0) {
+        for (const auto& cle : m_copy_list) {
+            real *dr = m_result_scratch + cle.get_offset_scratch_real(0, 0);
+            std::copy(dr, dr + cle.get_size(), cle.get_result_real(0, 0));
+            if (cle.is_complex()) {
+                real *di = m_result_scratch + cle.get_offset_scratch_imag(0, 0);
+                std::copy(di, di + cle.get_size(), cle.get_result_imag(0, 0));
+            }
         }
     }
 }
