@@ -18,6 +18,7 @@ option(WITH_MATLAB "with(out) MATLAB writer" ON)
 option(WITH_HDF5 "with(out) HDF5 writer" ON)
 option(WITH_CUDA "with(out) CUDA solver" ON)
 option(WITH_OPENMP "with(out) OPENMP solver" ON)
+option(WITH_MPICH "with(out) MPICH solver" ON)
 option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
 option(WITH_PYTHON "with(out) Python interface" ON)
 option(WITH_CPPTOOL "with(out) C++ tool" ON)
@@ -73,6 +74,15 @@ if(WITH_OPENMP)
     add_subdirectory(solver-openmp)
   endif(OPENMP_FOUND)
 endif(WITH_OPENMP)
+
+# MPICH support?
+if(WITH_MPICH)
+  include(FindMPI)
+  if(MPI_CXX_FOUND)
+    set(MBSOLVE_MPICH TRUE)
+    add_subdirectory(solver-mpich)
+  endif(MPI_CXX_FOUND)
+endif(WITH_MPICH)
 
 # Generic support
 add_subdirectory(solver-generic)
