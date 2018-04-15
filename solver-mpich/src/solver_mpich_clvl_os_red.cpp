@@ -635,20 +635,6 @@ solver_mpich_clvl_os_red<num_lvl>::run() const
         __mb_assume_aligned(m_result_scratch);
     }
 
-    /* gather prev and next pointers from other threads */
-    Eigen::Matrix<real, num_adj, 1> n_d[OL], p_d[OL];
-    real n_h[OL], n_e[OL];
-    real p_h[OL], p_e[OL];
-
-    __mb_assume_aligned(p_d);
-    __mb_assume_aligned(p_e);
-    __mb_assume_aligned(p_h);
-
-    __mb_assume_aligned(n_d);
-    __mb_assume_aligned(n_e);
-    __mb_assume_aligned(n_h);
-
-
     /* main loop */
     for (uint64_t n = 0; n <= num_timesteps/OL; n++) {
         if (world_rank == 0) {
