@@ -3,7 +3,7 @@
 #@ energy_policy_tag = mbsolve_wenhua2018b
 #@ minimize_time_to_solution = yes
 #@ job_name = mbsolve
-#@ job_type = parallel
+#@ job_type = MPICH
 #@ class = general
 #@ node = 48
 #@tasks_per_node = 8
