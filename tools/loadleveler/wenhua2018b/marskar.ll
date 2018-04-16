@@ -5,8 +5,8 @@
 #@ job_name = mbsolve
 #@ job_type = parallel
 #@ class = general
-#@ node = 8
-#@tasks_per_node = 48
+#@ node = 48
+#@tasks_per_node = 8
 #@ node_usage = not_shared
 #@ initialdir = $(home)/simulations/
 #@ output = wenhua2018b-marskar-$(schedd_host).$(jobid).$(stepid).out
