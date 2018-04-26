@@ -447,7 +447,7 @@ int main(int argc, char **argv)
                               1.373e-7));
 
         } else if (device_file == "marskar2011multilevel") {
-            if (solver_method == "openmp-6lvl-os-red") {
+            if (solver_method == "openmp-6lvl-os-red" || solver_method == "mpich-6lvl-os-red") {
 
                 Eigen::Matrix<mbsolve::complex, 6, 6> H, u, d_init;
 
