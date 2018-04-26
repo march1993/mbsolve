@@ -361,7 +361,7 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
     }
 
     uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
-    uint64_t chunk_base = m_scenario->get_num_gridpoints()/ world_size;
+    uint64_t chunk_base = m_scenario->get_num_gridpoints() / world_size;
     uint64_t chunk_rem = m_scenario->get_num_gridpoints() % world_size;
     uint64_t num_timesteps = m_scenario->get_num_timesteps();
 
@@ -423,7 +423,6 @@ solver_mpich_clvl_os_red<num_lvl>::solver_mpich_clvl_os_red
 template<unsigned int num_lvl>
 solver_mpich_clvl_os_red<num_lvl>::~solver_mpich_clvl_os_red()
 {
-    unsigned int P = omp_get_max_threads();
     unsigned int num_sources = m_sim_sources.size();
     unsigned int num_copy = m_copy_list.size();
     uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
@@ -615,10 +614,9 @@ template<unsigned int num_lvl>
 void
 solver_mpich_clvl_os_red<num_lvl>::run() const
 {
-    unsigned int P = omp_get_max_threads();
     uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
-    uint64_t chunk_base = m_scenario->get_num_gridpoints()/P;
-    uint64_t chunk_rem = m_scenario->get_num_gridpoints() % P;
+    uint64_t chunk_base = m_scenario->get_num_gridpoints() / world_size;
+    uint64_t chunk_rem = m_scenario->get_num_gridpoints() % world_size;
     uint64_t num_timesteps = m_scenario->get_num_timesteps();
     unsigned int num_sources = m_sim_sources.size();
     unsigned int num_copy = m_copy_list.size();
