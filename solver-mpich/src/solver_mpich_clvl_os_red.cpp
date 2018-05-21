@@ -832,7 +832,7 @@ solver_mpich_clvl_os_red<num_lvl>::run() const
             // std::cout << "receiving data..." << t_sync_record_size << std::endl;
             for (int i = 1; i < world_size; i++) {
                 MPI_Recv(t_sync_record, sizeof(sync_record) * (1 + t_sync_record_size), MPI_BYTE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                std::cout << "getting " << t_sync_record[0].offset << " records from process " << i << std::endl;
+                // std::cout << "getting " << t_sync_record[0].offset << " records from process " << i << std::endl;
                 for (size_t j = 0; j < t_sync_record[0].offset; j++) {
                     m_result_scratch[t_sync_record[1 + i].offset] = t_sync_record[1 + i].value;
                 }
