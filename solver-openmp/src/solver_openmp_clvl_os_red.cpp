@@ -194,14 +194,15 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
 
             /* diagonalize dipole operator */
             /* note: returned eigenvectors are normalized */
-            Eigen::RealSchur<Eigen::Matrix<real, num_adj, num_adj> > schur(U);
+            Eigen::RealSchur<Eigen::Matrix<real, num_adj, num_adj> > schur_r(U);
+            Eigen::ComplexSchur<Eigen::Matrix<complex, num_adj, num_adj> > schur_c(U);
 
             /* store propagators B1 and B2 */
             //sc.B_1 = A_0 * es.eigenvectors();
             //sc.B_2 = es.eigenvectors().adjoint() * A_0;
 
             sc.A_0 = A_0;
-            sc.B = schur.matrixU();
+            sc.B = schur_c.matrixU();
 
             sc.M = M;
             sc.U = U;
@@ -212,15 +213,15 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
                               + pow(U(1, 2), 2));
 
             /* for general analytic approach */
-            fill_rodr_coeff<num_lvl, num_adj>(schur.matrixU(),
-                                              schur.matrixT(), sc);
+            fill_rodr_coeff<num_lvl, num_adj>(schur_r.matrixU(),
+                                              schur_r.matrixT(), sc);
 
             /* TODO refine check? */
             sc.has_qm = true;
             sc.has_dipole = true;
 
             /* store diagonal matrix containing the eigenvalues */
-            //TODO: //sc.L = schur.matrixT() * scen->get_timestep_size();
+            sc.L = schur_c.matrixT().diagonal() * scen->get_timestep_size();
 
             sc.d_init = get_adj_op(qm->get_d_init());
 
