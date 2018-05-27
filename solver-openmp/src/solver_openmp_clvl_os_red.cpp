@@ -58,7 +58,6 @@ fill_rodr_coeff(const Eigen::Matrix<real, num_adj, num_adj>& eigenvec,
                   return std::abs(eigenval(i1, i1 - 1)) > std::abs(eigenval(i2, i2 - 1));
               });
 
-
     const Eigen::Matrix<real, num_adj, num_adj> &Q = eigenvec;
 
     /* TODO optimize
@@ -67,7 +66,6 @@ fill_rodr_coeff(const Eigen::Matrix<real, num_adj, num_adj>& eigenvec,
      */
     for (int i = 0; i < num_adj/2; i++) {
         unsigned int i1 = perm_idx[i];
-        // unsigned int i2 = perm_idx[2 * i + 1];
         Eigen::Matrix<real, num_adj, num_adj> b =
             Eigen::Matrix<real, num_adj, num_adj>::Zero();
 
