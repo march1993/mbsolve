@@ -2,8 +2,8 @@
 #include <string>
 #include <stdlib.h>
 
-#ifndef MBSOLVE_SOLVER_OPENMP_COMMON
-#define MBSOLVE_SOLVER_OPENMP_COMMON
+#ifndef MBSOLVE_SOLVER_MPICH_COMMON
+#define MBSOLVE_SOLVER_MPICH_COMMON
 
 #define ALIGN 64
 

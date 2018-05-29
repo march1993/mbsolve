@@ -45,7 +45,7 @@ const unsigned int OL = 32;
 const unsigned int VEC = 4;
 
 template<unsigned int num_lvl, unsigned int num_adj>
-void
+static void
 fill_rodr_coeff(const Eigen::Matrix<real, num_adj, num_adj>& eigenvec,
                 const Eigen::Matrix<real, num_adj, num_adj>& eigenval,
                 sim_constants_clvl_os<num_lvl>& sc)
@@ -516,7 +516,7 @@ solver_openmp_clvl_os_red<num_lvl>::get_name() const
 }
 
 template<unsigned int num_lvl, unsigned int num_adj>
-void
+static void
 update_fdtd(uint64_t size, unsigned int border, real *t_e, real *t_p,
             real *t_h, Eigen::Matrix<real, num_adj, 1>* t_d,
             unsigned int *t_mat_indices,
@@ -540,7 +540,7 @@ update_fdtd(uint64_t size, unsigned int border, real *t_e, real *t_p,
 }
 
 template<unsigned int num_lvl, unsigned int num_adj>
-void
+static void
 update_h(unsigned int size, unsigned int border, real *t_e, real *t_p,
             real *t_h, Eigen::Matrix<real, num_adj, 1>* t_d,
             unsigned int *t_mat_indices,
@@ -556,7 +556,7 @@ update_h(unsigned int size, unsigned int border, real *t_e, real *t_p,
     }
 }
 
-void
+static void
 apply_sources(real *t_e, real *source_data, unsigned int num_sources,
               sim_source *l_sim_sources, uint64_t time,
               unsigned int base_pos, uint64_t chunk)
@@ -607,13 +607,13 @@ apply_sources(real *t_e, real *source_data, unsigned int num_sources,
 //#endif
 #endif
 
-complex mexp(const complex& arg)
+static complex mexp(const complex& arg)
 {
     return std::exp(arg);
 }
 
 template<unsigned int num_lvl, unsigned int num_adj>
-inline Eigen::Matrix<real, num_adj, num_adj>
+static inline Eigen::Matrix<real, num_adj, num_adj>
 mat_exp(const sim_constants_clvl_os<num_lvl>& s, real e)
 {
     Eigen::Matrix<real, num_adj, num_adj> ret;
@@ -648,7 +648,7 @@ mat_exp(const sim_constants_clvl_os<num_lvl>& s, real e)
 }
 
 template<unsigned int num_lvl, unsigned int num_adj>
-void
+static void
 update_d(uint64_t size, unsigned int border, real *t_e, real *t_p,
          Eigen::Matrix<real, num_adj, 1>* t_d,
          unsigned int *t_mat_indices,

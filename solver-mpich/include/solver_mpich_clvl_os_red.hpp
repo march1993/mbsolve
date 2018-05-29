@@ -19,8 +19,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
-#define MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
+#ifndef MBSOLVE_SOLVER_MPICH_3LVL_OS_RED_H
+#define MBSOLVE_SOLVER_MPICH_3LVL_OS_RED_H
 
 #include <iostream>
 #include <omp.h>
