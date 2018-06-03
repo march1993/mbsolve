@@ -51,7 +51,7 @@ fill_rodr_coeff(const Eigen::Matrix<real, num_adj, num_adj>& eigenvec,
                 sim_constants_clvl_os<num_lvl>& sc)
 {
     /* creating sorting order (descending eigenvalues) */
-    std::vector<size_t> perm_idx(num_adj);
+    std::vector<size_t> perm_idx(num_adj - 1);
     std::iota(perm_idx.begin(), perm_idx.end(), 1);
     std::sort(perm_idx.begin(), perm_idx.end(),
               [&eigenval](size_t i1, size_t i2) {
@@ -71,8 +71,8 @@ fill_rodr_coeff(const Eigen::Matrix<real, num_adj, num_adj>& eigenvec,
 
         sc.theta[i] = eigenval(i1, i1 - 1);
 
-        b(i1, i1 - 1) = -1.0;
-        b(i1 - 1, i1) = +1.0;
+        b(i1, i1 - 1) = +1.0;
+        b(i1 - 1, i1) = -1.0;
 
         sc.coeff_1[i] = Q * b * Q.transpose();
         sc.coeff_2[i] = Q * b * b * Q.transpose();

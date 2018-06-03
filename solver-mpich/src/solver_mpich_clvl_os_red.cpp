@@ -67,8 +67,8 @@ fill_rodr_coeff(const Eigen::Matrix<real, num_adj, num_adj>& eigenvec,
 
         sc.theta[i] = eigenval(i1, i1 - 1);
 
-        b(i1, i1 - 1) = -1.0;
-        b(i1 - 1, i1) = +1.0;
+        b(i1, i1 - 1) = +1.0;
+        b(i1 - 1, i1) = -1.0;
 
         sc.coeff_1[i] = Q * b * Q.transpose();
         sc.coeff_2[i] = Q * b * b * Q.transpose();
