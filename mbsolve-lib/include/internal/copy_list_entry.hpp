@@ -147,7 +147,7 @@ public:
             m_dev.m_interval = scen->get_timestep_size();
             m_dev.m_interval_ratio = 1.0;
         } else {
-            m_dev.m_rows = floor(scen->get_endtime()/rec->get_interval()) + 1;
+            m_dev.m_rows = ceil(scen->get_endtime()/rec->get_interval()) + 1;
             m_dev.m_interval = rec->get_interval();
             m_dev.m_interval_ratio = scen->get_timestep_size()/
                 rec->get_interval();
