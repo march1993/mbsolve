@@ -173,6 +173,27 @@ public:
 };
 
 
+class exp_pulse : public source
+{
+private:
+    real m_tau;
+public:
+    exp_pulse(const std::string& name, real position,
+                       type source_type,
+                       real ampl, real freq,
+                       real phase,
+                       real tau) :
+    source(name, position, source_type, ampl, freq, phase), m_tau(tau)
+    {
+    }
+
+    real calc_value(real t) const
+    {
+        return exp( - (t - m_phase) * (t - m_phase) / (m_tau * m_tau)) * sin(2 * M_PI * m_freq * t);
+    }
+};
+
+
 /* TODO: custom functor source / callback function? */
 
 }
