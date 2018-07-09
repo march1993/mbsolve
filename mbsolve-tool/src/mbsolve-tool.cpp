@@ -167,6 +167,65 @@ relax_sop_tzenov2018_gain(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     return ret;
 }
 
+
+Eigen::Matrix<mbsolve::complex, 6, 6>
+relax_marskar(const Eigen::Matrix<mbsolve::complex, 6, 6>& arg)
+{
+    Eigen::Matrix<mbsolve::complex, 6, 6> ret =
+        Eigen::Matrix<mbsolve::complex, 6, 6>::Zero();
+
+    static bool gamma_initialized = false;
+    static Eigen::Matrix<mbsolve::real, 6, 6> gamma;
+
+    if (! gamma_initialized) {
+        gamma_initialized = true;
+        gamma.setZero();
+
+        gamma(0, 0) = 1e12;
+        gamma(1, 1) = 1e12;
+        gamma(2, 2) = 1e12;
+        gamma(3, 3) = 1e12;
+        gamma(4, 4) = 1e12;
+        gamma(5, 5) = 1e12;
+
+        gamma(0, 1) = 1.0 / (1.0e-12);
+        gamma(1, 2) = 1.0 / (1.1e-12);
+        gamma(2, 3) = 1.0 / (1.2e-12);
+        gamma(3, 4) = 1.0 / (1.3e-12);
+        gamma(4, 5) = 1.0 / (1.4e-12);
+
+        gamma(1, 0) = 3.82950e+11;
+        gamma(2, 1) = 3.77127e+11;
+        gamma(3, 2) = 3.74488e+11;
+        gamma(4, 3) = 3.74467e+11;
+        gamma(5, 4) = 3.76675e+11;
+
+    }
+
+    for (auto m = 0; m < 6; m++) {
+        for (auto n = 0; n < 6; n++) {
+
+            if (m == n) {
+                for (auto j = 0; j < 6; j++) {
+                    if (j != m) {
+                        ret(m, m) += gamma(m, j) * arg(j, j) - gamma(j, m) * arg(m, m);
+                    }
+                }
+            } else {
+                mbsolve::real coef = 0.0;
+                for (auto j = 0; j < 6; j++) {
+                    coef += gamma(j, m) + gamma(j, n);
+                }
+                ret(m, n) = -0.5 * coef * arg(m, n);
+            }
+
+
+        }
+    }
+
+    return ret;
+}
+
 int main(int argc, char **argv)
 {
     /* parse command line arguments */
@@ -386,6 +445,89 @@ int main(int argc, char **argv)
             scen->add_record(std::make_shared<mbsolve::record>
                              ("h0", mbsolve::record::magnetic, 1, 1, 0.0,
                               1.373e-7));
+
+        } else if (device_file == "marskar2011multilevel") {
+            if (solver_method == "openmp-6lvl-os-red" || solver_method == "mpich-6lvl-os-red") {
+
+                Eigen::Matrix<mbsolve::complex, 6, 6> H, u, d_init;
+
+                // Hamiltonian
+                H.setZero();
+                H(0, 0) = 0;
+                for (auto n = 1; n <= 5; n++) {
+                    H(n, n) = 1.0 - 0.1 * (n - 3) + H(n - 1, n - 1);
+                }
+                H = H * mbsolve::HBAR * 2 * M_PI * 1e13;
+
+                // dipole_op
+                u.setZero();
+                for (auto n = 0; n < 5; n++) {
+                    u(n, n + 1) = 1e-29;
+                    u(n + 1, n) = 1e-29;
+                }
+
+                // initial density matrix
+                d_init.setZero();
+                d_init(0, 0) = 0.60;
+                d_init(1, 1) = 0.23;
+                d_init(2, 2) = 0.096;
+                d_init(3, 3) = 0.044;
+                d_init(4, 4) = 0.02;
+                d_init(5, 5) = 0.01;
+
+                num_gridpoints = 1000; // 500;
+                sim_endtime = 4e-12; // 2ps
+                scen = std::make_shared<mbsolve::scenario>("Basic", num_gridpoints, sim_endtime);
+
+                // Na = 1e25
+                auto qm = std::make_shared<mbsolve::qm_desc_clvl<6>>
+                    (1e25, H, u, &relax_marskar, d_init);
+
+                auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+                auto mat_al = std::make_shared<mbsolve::material>("AnharmonicLadder", qm);
+                mbsolve::material::add_to_library(mat_vac);
+                mbsolve::material::add_to_library(mat_al);
+
+                /* set up device */
+                dev = std::make_shared<mbsolve::device>("Marskar");
+                /*
+                // pad 10% of 1.0 millimeter to both side
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Vacuum left", mat_vac, 0, 0.1e-3));
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Active region", mat_al, 0.1e-3, 1.1e-3));
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Vacuum right", mat_vac, 1.1e-3, 1.2e-3));
+                */
+                dev->add_region(std::make_shared<mbsolve::region>
+                            ("Active region", mat_al, 0.0, 2.0e-3));
+
+                /* pulse */
+                auto tau = 100e-15;
+                auto exp_pulse = std::make_shared<mbsolve::exp_pulse>(
+                    "exp", // name
+                    0.0, // position
+                    mbsolve::source::hard_source, // hard_source?
+                    5e8, // amplitude
+                    1e13, // frequency
+                    3.0 * tau, // phase: 3tau
+                    tau // tau
+                );
+
+                scen->add_source(exp_pulse);
+
+                scen->add_record(std::make_shared<mbsolve::record>("d11", mbsolve::record::type::density, 1, 1, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d22", mbsolve::record::type::density, 2, 2, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d33", mbsolve::record::type::density, 3, 3, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d44", mbsolve::record::type::density, 4, 4, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d55", mbsolve::record::type::density, 5, 5, 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("d66", mbsolve::record::type::density, 6, 6, 4e-15));
+
+                scen->add_record(std::make_shared<mbsolve::record>("inv12", 4e-15));
+                scen->add_record(std::make_shared<mbsolve::record>("e", 4e-15));
+
+            }
+
         } else {
             throw std::invalid_argument("Specified device not found!");
         }

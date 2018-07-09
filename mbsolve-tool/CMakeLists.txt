@@ -18,6 +18,10 @@ if(MBSOLVE_OPENMP)
   target_link_libraries(mbsolve-tool solver-openmp)
 endif(MBSOLVE_OPENMP)
 
+if(MBSOLVE_MPICH)
+  target_link_libraries(mbsolve-tool solver-mpich)
+endif(MBSOLVE_MPICH)
+
 if(MBSOLVE_MATLAB)
   target_link_libraries(mbsolve-tool writer-matlab)
 endif(MBSOLVE_MATLAB)
