@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <string>
 #include <stdlib.h>
 
 #ifndef MBSOLVE_SOLVER_OPENMP_COMMON
@@ -39,7 +40,7 @@ inline void *mb_aligned_alloc(size_t size)
     ret = posix_memalign(&addr, ALIGN, size);
 
     if (ret != 0) {
-        throw std::invalid_argument("posix_memalign failed.");
+        throw std::invalid_argument("posix_memalign failed. (error code: " + std::to_string(ret) + ")");
     }
 
     return addr;
